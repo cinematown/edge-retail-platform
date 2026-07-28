@@ -17,6 +17,11 @@ dist/
 build/
 *.egg-info/
 
+# Java and Gradle
+.gradle/
+**/build/
+*.class
+
 # Editors and operating systems
 .idea/
 .vscode/
