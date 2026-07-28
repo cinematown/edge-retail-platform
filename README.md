@@ -7,7 +7,8 @@ Jetson YOLO가 발행한 무인매장 결제 완료 이벤트를 Raspberry Pi의
 이 저장소는 다음 구성 요소를 다룹니다.
 
 - Eclipse Mosquitto 개발 및 배포 설정
-- Python 기반 Edge Gateway Service
+- Python 기반 Edge Gateway 기준 구현
+- Java 21 + Micronaut 기반 Edge Gateway 재구현
 - 재현 가능한 시나리오를 사용하는 Mock YOLO Publisher
 - MySQL 스키마와 초기 상품 데이터
 - Grafana MySQL 데이터 소스와 대시보드
@@ -61,9 +62,13 @@ edge-retail-platform/
 ├── .env.example
 ├── docker-compose.dev.yml
 ├── docs/
-├── gateway/
+├── gateway/                    # Python 기준 구현
 │   ├── src/edge_gateway/
 │   └── tests/
+├── gateway-micronaut/          # Java 21 재구현
+│   ├── src/main/java/
+│   ├── src/test/java/
+│   └── README.md
 ├── mock-publisher/
 │   ├── scenarios/
 │   └── payloads/
@@ -75,11 +80,10 @@ edge-retail-platform/
 │   ├── provisioning/
 │   └── dashboards/
 └── deployment/
+    ├── edge-gateway-micronaut.service
     └── mosquitto/
         └── mosquitto.dev.conf
 ```
-
-후속 단계에서 각 디렉터리에 필요한 실행 코드와 설정을 추가합니다.
 
 ## 환경 변수
 
@@ -112,7 +116,7 @@ docker compose --env-file .env -f docker-compose.dev.yml ps
 
 Mosquitto는 익명 접속을 허용하지 않습니다. `.env`의 `MQTT_USERNAME`과 `MQTT_PASSWORD`를 사용해야 합니다. MySQL은 최초로 빈 볼륨을 초기화할 때 스키마, 상품 시드, Grafana 읽기 전용 사용자 생성을 순서대로 적용합니다.
 
-개발용 포트는 모두 `127.0.0.1`에만 바인딩됩니다. 기본 포트가 이미 사용 중이면 `.env`의 해당 포트 값을 변경한 뒤 Compose 명령을 실행합니다.
+개발용 포트는 모두 로컬 개발 환경에만 노출되도록 설정합니다. 기본 포트가 이미 사용 중이면 `.env`의 해당 포트 값을 변경한 뒤 Compose 명령을 실행합니다.
 
 서비스를 중지하되 데이터를 보존하려면 다음 명령을 사용합니다.
 
@@ -138,9 +142,13 @@ python3 -m venv .venv
 
 제공 시나리오는 정상 단일상품, 정상 복수상품, 동일 이벤트 중복, 빈 장바구니, 존재하지 않는 SKU입니다. 상세 사용법과 CLI 옵션은 `mock-publisher/README.md`를 참고합니다.
 
-## Gateway
+## Gateway 구현
 
-Gateway는 MQTT Subscriber를 내부에 포함한 단일 Python 프로세스입니다. checkout 메시지를 Pydantic으로 검증하고 MySQL에서 상품 단가를 조회한 뒤, `checkouts`와 `checkout_items`를 하나의 트랜잭션으로 저장합니다.
+두 구현은 같은 MQTT 계약, MySQL 스키마, 중복 처리 정책과 Grafana 대시보드를 공유합니다. 비교 또는 통합 검증 시에는 두 게이트웨이를 동시에 실행하지 않습니다.
+
+### Python 기준 구현
+
+Python Gateway는 MQTT Subscriber를 내부에 포함한 단일 프로세스입니다. checkout 메시지를 Pydantic으로 검증하고 MySQL에서 상품 단가를 조회한 뒤, `checkouts`와 `checkout_items`를 하나의 트랜잭션으로 저장합니다.
 
 ```bash
 python3 -m venv .venv
@@ -148,16 +156,30 @@ python3 -m venv .venv
 .venv/bin/edge-gateway
 ```
 
-다른 터미널에서 정상 복수상품 시나리오를 실행하면 `cola_can` 2개와 `snack_red` 1개가 총 상품 수 3개, 총액 5,000원으로 저장됩니다.
+구조와 테스트 명령은 `gateway/README.md`를 참고합니다.
+
+### Micronaut Java 구현
+
+Micronaut Gateway는 Java 21 기반 비웹 프로세스입니다. Micronaut MQTT가 Mosquitto 구독과 재연결을 담당하고, Serialization·Validation이 메시지 계약을 검사하며, Micronaut Data JDBC와 HikariCP가 MySQL 연결 및 트랜잭션 수명주기를 관리합니다. JPA와 Hibernate는 사용하지 않습니다.
 
 ```bash
-.venv/bin/python mock-publisher/publisher.py \
-  mock-publisher/scenarios/normal-multiple-items.json
+cd gateway-micronaut
+set -a
+source ../.env
+set +a
+gradle run
 ```
 
-메시지의 `completedAt`은 UTC offset을 포함해야 하며 Gateway는 이를 UTC로 정규화해 MySQL `DATETIME(3)`에 저장합니다. 구조와 테스트 명령은 `gateway/README.md`를 참고합니다.
+배포용 실행 디렉터리는 다음과 같이 생성합니다.
 
-동일한 `eventId`는 한 번만 저장되며 재전송은 `CHECKOUT_DUPLICATE_SKIPPED`로 기록됩니다. Gateway는 status topic도 구독해 `device_status`를 갱신하고, MQTT 재연결 시 두 topic을 자동으로 다시 구독합니다. 검증 실패나 MySQL 오류는 해당 메시지만 실패시키며 Gateway 프로세스를 종료하지 않습니다.
+```bash
+gradle test installDist
+./build/install/edge-retail-gateway-micronaut/bin/edge-retail-gateway-micronaut
+```
+
+세부 실행법과 검증 절차는 `gateway-micronaut/README.md`를 참고합니다.
+
+두 구현 모두 `completedAt`을 UTC로 정규화해 MySQL `DATETIME(3)`에 저장하고, 동일한 `eventId` 재전송을 중복 거래로 저장하지 않습니다. 검증 실패나 MySQL 오류는 해당 메시지만 실패시키며 게이트웨이 프로세스는 계속 실행됩니다.
 
 ## 데이터베이스 초기화
 
@@ -203,6 +225,18 @@ docker compose --env-file .env -f docker-compose.dev.yml up -d --force-recreate 
 
 대시보드는 누적 결제 건수·판매 금액, 상품별 수량·금액, 시간대별 결제·매출, 최근 결제, 평균 confidence, 최근 payer track ID, Jetson 상태를 표시합니다. 세부 구성과 권한 확인 방법은 `grafana/README.md`를 참고합니다.
 
+## 자동 검증
+
+Micronaut Gateway GitHub Actions는 다음을 실제로 검증합니다.
+
+1. Java 21에서 단위 테스트 및 `installDist` 패키징
+2. Docker 기반 Mosquitto와 MySQL 실행
+3. Micronaut Gateway 시작
+4. 기존 정상 복수상품 및 중복 이벤트 Mock Publisher 시나리오 발행
+5. 정상 결제의 상품 수 3개와 총액 5,000원 확인
+6. 동일 `eventId`가 한 건만 저장되는지 확인
+7. Jetson ONLINE 상태가 `device_status`에 반영되는지 확인
+
 ## 구현 단계
 
 - [x] 1단계: 프로젝트 골격, 환경 변수 예시, README 초안, DB 스키마/시드
@@ -211,6 +245,7 @@ docker compose --env-file .env -f docker-compose.dev.yml up -d --force-recreate 
 - [x] 4단계: Python Gateway 기본 결제 처리
 - [x] 5단계: 중복·검증·DB 오류와 MQTT 재연결 처리
 - [x] 6단계: Grafana 프로비저닝과 대시보드
-- [ ] 7단계: 계약 기반 Jetson 통합 및 end-to-end 검증
+- [x] 7단계: Micronaut Java Gateway 재구현과 자동 end-to-end 검증
+- [ ] 8단계: 실제 Jetson Publisher 통합 및 현장 end-to-end 검증
 
-Docker Compose는 개발 환경에만 사용하며, Raspberry Pi의 최종 프로세스는 Mosquitto, Gateway, MySQL, Grafana를 독립 서비스로 운영합니다. HeatWave 연동은 2차 MVP이고 로컬 결제 경로에는 포함하지 않습니다.
+Docker Compose는 개발 및 자동 검증 환경에 사용합니다. Raspberry Pi의 최종 프로세스는 Mosquitto, Gateway, MySQL, Grafana를 독립 서비스로 운영합니다. HeatWave 연동은 2차 MVP이고 로컬 결제 경로에는 포함하지 않습니다.
