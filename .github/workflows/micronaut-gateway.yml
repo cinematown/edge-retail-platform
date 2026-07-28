@@ -41,7 +41,7 @@ jobs:
         working-directory: gateway-micronaut
         run: |
           set +e
-          gradle test shadowJar --no-daemon > gradle-test.log 2>&1
+          gradle test installDist --no-daemon > gradle-test.log 2>&1
           status=$?
           cat gradle-test.log
           exit $status
@@ -68,9 +68,9 @@ jobs:
           set -a
           source .env
           set +a
-          gateway_jar=$(find gateway-micronaut/build/libs -maxdepth 1 -name '*-all.jar' -print -quit)
-          test -n "$gateway_jar"
-          nohup java -jar "$gateway_jar" > gateway-micronaut-e2e.log 2>&1 &
+          gateway_bin="gateway-micronaut/build/install/edge-retail-gateway-micronaut/bin/edge-retail-gateway-micronaut"
+          test -x "$gateway_bin"
+          nohup "$gateway_bin" > gateway-micronaut-e2e.log 2>&1 &
           echo $! > gateway-micronaut.pid
           sleep 8
           kill -0 "$(cat gateway-micronaut.pid)"
