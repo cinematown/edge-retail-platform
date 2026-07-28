@@ -20,6 +20,8 @@ retail/jetson-01/status
 
 ## 실행
 
+Java 21과 Gradle 8.14.3을 준비합니다. CI도 같은 버전을 사용합니다.
+
 먼저 저장소 루트에서 개발 인프라를 실행합니다.
 
 ```bash
@@ -34,10 +36,15 @@ cd gateway-micronaut
 set -a
 source ../.env
 set +a
-sh ./gradlew run
+gradle run
 ```
 
-최초 실행 시 `gradlew`가 Gradle 공식 배포 서버에서 wrapper JAR을 내려받고 SHA-256을 확인합니다. Gradle이 시스템에 설치되어 있다면 `gradle run`도 사용할 수 있습니다.
+테스트와 배포용 fat JAR 생성은 다음과 같습니다.
+
+```bash
+gradle test
+gradle shadowJar
+```
 
 다른 터미널에서 기존 Mock Publisher를 실행합니다.
 
