@@ -28,4 +28,16 @@ jobs:
           java-version: "21"
           cache: gradle
       - name: Test Micronaut gateway
-        run: sh ./gradlew test --no-daemon
+        run: |
+          set +e
+          sh ./gradlew test --no-daemon > gradle-test.log 2>&1
+          status=$?
+          cat gradle-test.log
+          exit $status
+      - name: Upload Gradle log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: micronaut-gradle-log
+          path: gateway-micronaut/gradle-test.log
+          if-no-files-found: error
