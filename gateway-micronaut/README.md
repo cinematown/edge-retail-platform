@@ -39,12 +39,14 @@ set +a
 gradle run
 ```
 
-테스트와 배포용 fat JAR 생성은 다음과 같습니다.
+테스트와 배포용 실행 디렉터리 생성은 다음과 같습니다.
 
 ```bash
-gradle test
-gradle shadowJar
+gradle test installDist
+./build/install/edge-retail-gateway-micronaut/bin/edge-retail-gateway-micronaut
 ```
+
+`installDist` 결과에는 실행 스크립트와 필요한 JAR 의존성이 함께 포함됩니다. Raspberry Pi systemd 단위도 이 실행 스크립트를 사용합니다.
 
 다른 터미널에서 기존 Mock Publisher를 실행합니다.
 
