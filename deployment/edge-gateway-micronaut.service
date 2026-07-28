@@ -1,0 +1,19 @@
+[Unit]
+Description=Edge Retail Micronaut Gateway
+After=network-online.target mosquitto.service mysql.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=edge-retail
+Group=edge-retail
+WorkingDirectory=/opt/edge-retail-platform/gateway-micronaut
+EnvironmentFile=/opt/edge-retail-platform/.env
+ExecStart=/usr/bin/java -jar /opt/edge-retail-platform/gateway-micronaut/build/libs/edge-retail-gateway-micronaut-0.1.0-all.jar
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
