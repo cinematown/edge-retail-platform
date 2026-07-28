@@ -1,0 +1,31 @@
+name: Micronaut Gateway
+
+on:
+  push:
+    branches: [main, agent/micronaut-gateway]
+    paths:
+      - "gateway-micronaut/**"
+      - ".github/workflows/micronaut-gateway.yml"
+  pull_request:
+    paths:
+      - "gateway-micronaut/**"
+      - ".github/workflows/micronaut-gateway.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: gateway-micronaut
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: gradle
+      - name: Test Micronaut gateway
+        run: sh ./gradlew test --no-daemon
