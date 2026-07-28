@@ -20,8 +20,8 @@ mqtt:
     password: ${MQTT_PASSWORD:change_me}
     clean-session: true
     automatic-reconnect: true
-    max-reconnect-delay: 30000
-    connection-timeout: 5
+    max-reconnect-delay: 30
+    connection-timeout: 5s
     keep-alive-interval: ${MQTT_KEEPALIVE:60}
 
 datasources:
