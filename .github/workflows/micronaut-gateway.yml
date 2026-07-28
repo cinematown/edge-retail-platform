@@ -26,11 +26,13 @@ jobs:
         with:
           distribution: temurin
           java-version: "21"
-          cache: gradle
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.14.3"
       - name: Test Micronaut gateway
         run: |
           set +e
-          sh ./gradlew test --no-daemon > gradle-test.log 2>&1
+          gradle test --no-daemon > gradle-test.log 2>&1
           status=$?
           cat gradle-test.log
           exit $status
