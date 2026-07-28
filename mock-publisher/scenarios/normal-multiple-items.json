@@ -1,0 +1,40 @@
+[
+  {
+    "delayMs": 0,
+    "topic": "retail/jetson-01/status",
+    "payload": {
+      "schemaVersion": 1,
+      "deviceId": "jetson-01",
+      "status": "ONLINE",
+      "modelVersion": "mock-yolo-v1",
+      "trackingSessionId": "mock-run-multiple-001",
+      "observedAt": "AUTO"
+    }
+  },
+  {
+    "delayMs": 250,
+    "topic": "retail/jetson-01/checkout/completed",
+    "payload": {
+      "schemaVersion": 1,
+      "eventId": "evt-checkout-manual-20260727101011",
+      "checkoutId": "checkout-test-20260727101011",
+      "deviceId": "jetson-01",
+      "trackingSessionId": "mock-run-multiple-001",
+      "cartTrackId": 22,
+      "payerTrackId": 17,
+      "items": [
+        {
+          "sku": "cola_can",
+          "quantity": 2,
+          "confidence": 0.93
+        },
+        {
+          "sku": "snack_red",
+          "quantity": 1,
+          "confidence": 0.89
+        }
+      ],
+      "completedAt": "AUTO"
+    }
+  }
+]

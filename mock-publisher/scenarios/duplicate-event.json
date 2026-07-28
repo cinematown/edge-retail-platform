@@ -1,0 +1,44 @@
+[
+  {
+    "delayMs": 0,
+    "topic": "retail/jetson-01/checkout/completed",
+    "payload": {
+      "schemaVersion": 1,
+      "eventId": "evt-checkout-test-duplicate-001",
+      "checkoutId": "checkout-test-duplicate-001",
+      "deviceId": "jetson-01",
+      "trackingSessionId": "mock-run-duplicate-001",
+      "cartTrackId": 32,
+      "payerTrackId": 27,
+      "items": [
+        {
+          "sku": "water_bottle",
+          "quantity": 1,
+          "confidence": 0.91
+        }
+      ],
+      "completedAt": "2026-07-26T14:20:42.456+09:00"
+    }
+  },
+  {
+    "delayMs": 100,
+    "topic": "retail/jetson-01/checkout/completed",
+    "payload": {
+      "schemaVersion": 1,
+      "eventId": "evt-checkout-test-duplicate-001",
+      "checkoutId": "checkout-test-duplicate-001",
+      "deviceId": "jetson-01",
+      "trackingSessionId": "mock-run-duplicate-001",
+      "cartTrackId": 32,
+      "payerTrackId": 27,
+      "items": [
+        {
+          "sku": "water_bottle",
+          "quantity": 1,
+          "confidence": 0.91
+        }
+      ],
+      "completedAt": "2026-07-26T14:20:42.456+09:00"
+    }
+  }
+]

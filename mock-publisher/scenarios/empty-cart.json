@@ -1,0 +1,17 @@
+[
+  {
+    "delayMs": 0,
+    "topic": "retail/jetson-01/checkout/completed",
+    "payload": {
+      "schemaVersion": 1,
+      "eventId": "evt-checkout-test-empty-001",
+      "checkoutId": "checkout-test-empty-001",
+      "deviceId": "jetson-01",
+      "trackingSessionId": "mock-run-empty-001",
+      "cartTrackId": 42,
+      "payerTrackId": 37,
+      "items": [],
+      "completedAt": "AUTO"
+    }
+  }
+]

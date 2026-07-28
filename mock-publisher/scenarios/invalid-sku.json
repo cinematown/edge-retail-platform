@@ -1,0 +1,23 @@
+[
+  {
+    "delayMs": 0,
+    "topic": "retail/jetson-01/checkout/completed",
+    "payload": {
+      "schemaVersion": 1,
+      "eventId": "evt-checkout-test-invalid-sku-001",
+      "checkoutId": "checkout-test-invalid-sku-001",
+      "deviceId": "jetson-01",
+      "trackingSessionId": "mock-run-invalid-sku-001",
+      "cartTrackId": 52,
+      "payerTrackId": 47,
+      "items": [
+        {
+          "sku": "unknown_product",
+          "quantity": 1,
+          "confidence": 0.88
+        }
+      ],
+      "completedAt": "AUTO"
+    }
+  }
+]

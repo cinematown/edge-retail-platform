@@ -1,0 +1,23 @@
+apiVersion: 1
+
+prune: true
+
+datasources:
+  - name: Edge Retail MySQL
+    uid: edge-retail-mysql
+    type: mysql
+    access: proxy
+    url: mysql:3306
+    user: ${GRAFANA_MYSQL_USER}
+    isDefault: true
+    editable: false
+    jsonData:
+      database: ${MYSQL_DATABASE}
+      timezone: "+00:00"
+      maxOpenConns: 5
+      maxIdleConns: 2
+      maxIdleConnsAuto: false
+      connMaxLifetime: 14400
+      timeInterval: 1m
+    secureJsonData:
+      password: ${GRAFANA_MYSQL_PASSWORD}

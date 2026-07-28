@@ -1,0 +1,35 @@
+[
+  {
+    "delayMs": 0,
+    "topic": "retail/jetson-01/status",
+    "payload": {
+      "schemaVersion": 1,
+      "deviceId": "jetson-01",
+      "status": "ONLINE",
+      "modelVersion": "mock-yolo-v1",
+      "trackingSessionId": "mock-run-single-001",
+      "observedAt": "AUTO"
+    }
+  },
+  {
+    "delayMs": 250,
+    "topic": "retail/jetson-01/checkout/completed",
+    "payload": {
+      "schemaVersion": 1,
+      "eventId": "evt-checkout-test-single-001",
+      "checkoutId": "checkout-test-single-001",
+      "deviceId": "jetson-01",
+      "trackingSessionId": "mock-run-single-001",
+      "cartTrackId": 12,
+      "payerTrackId": 7,
+      "items": [
+        {
+          "sku": "cola_can",
+          "quantity": 1,
+          "confidence": 0.93
+        }
+      ],
+      "completedAt": "AUTO"
+    }
+  }
+]

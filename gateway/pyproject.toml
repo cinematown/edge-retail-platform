@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "edge-retail-gateway"
+version = "0.1.0"
+description = "MQTT to MySQL edge checkout gateway"
+requires-python = ">=3.10"
+dependencies = [
+    "mysql-connector-python==9.7.0",
+    "paho-mqtt==2.1.0",
+    "pydantic==2.13.4",
+    "python-dotenv==1.2.2",
+]
+
+[project.scripts]
+edge-gateway = "edge_gateway.main:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
