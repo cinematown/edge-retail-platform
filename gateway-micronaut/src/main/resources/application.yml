@@ -1,0 +1,41 @@
+micronaut:
+  application:
+    name: edge-retail-gateway-micronaut
+  server:
+    enabled: false
+  executors:
+    consumer:
+      type: scheduled
+      core-pool-size: 4
+  serde:
+    deserialization:
+      ignore-unknown: false
+      fail-on-null-for-primitives: true
+
+mqtt:
+  client:
+    server-uri: tcp://${MQTT_HOST:localhost}:${MQTT_PORT:1883}
+    client-id: ${MQTT_CLIENT_ID:edge-gateway-micronaut-01}
+    user-name: ${MQTT_USERNAME:edge_gateway}
+    password: ${MQTT_PASSWORD:change_me}
+    clean-session: true
+    automatic-reconnect: true
+    max-reconnect-delay: 30
+    connection-timeout: 5s
+    keep-alive-interval: ${MQTT_KEEPALIVE:60}
+
+datasources:
+  default:
+    url: jdbc:mysql://${MYSQL_HOST:localhost}:${MYSQL_PORT:3306}/${MYSQL_DATABASE:edge_retail}?useUnicode=true&characterEncoding=utf8&serverTimezone=UTC
+    username: ${MYSQL_USER:edge_gateway}
+    password: ${MYSQL_PASSWORD:change_me}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    dialect: MYSQL
+    maximum-pool-size: 5
+    minimum-idle: 1
+    connection-timeout: 5000
+    connection-init-sql: SET time_zone = '+00:00'
+
+logger:
+  levels:
+    com.cinematown.edgeretail.gateway: ${LOG_LEVEL:INFO}

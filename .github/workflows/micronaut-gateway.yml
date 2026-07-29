@@ -1,0 +1,129 @@
+name: Micronaut Gateway
+
+on:
+  push:
+    branches: [main, agent/micronaut-gateway]
+    paths:
+      - "gateway-micronaut/**"
+      - "mock-publisher/**"
+      - "database/**"
+      - "deployment/mosquitto/**"
+      - "docker-compose.dev.yml"
+      - ".env.example"
+      - ".github/workflows/micronaut-gateway.yml"
+  pull_request:
+    paths:
+      - "gateway-micronaut/**"
+      - "mock-publisher/**"
+      - "database/**"
+      - "deployment/mosquitto/**"
+      - "docker-compose.dev.yml"
+      - ".env.example"
+      - ".github/workflows/micronaut-gateway.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.14.3"
+
+      - name: Unit test and package
+        working-directory: gateway-micronaut
+        run: |
+          set +e
+          gradle test installDist --no-daemon > gradle-test.log 2>&1
+          status=$?
+          cat gradle-test.log
+          exit $status
+
+      - name: Start Mosquitto and MySQL
+        run: |
+          cp .env.example .env
+          set -a
+          source .env
+          set +a
+          docker compose --env-file .env -f docker-compose.dev.yml up -d mosquitto mysql
+          for attempt in $(seq 1 60); do
+            if docker compose --env-file .env -f docker-compose.dev.yml exec -T mysql \
+              mysqladmin ping -h 127.0.0.1 -u root -p"$MYSQL_ROOT_PASSWORD" --silent; then
+              exit 0
+            fi
+            sleep 2
+          done
+          docker compose --env-file .env -f docker-compose.dev.yml ps
+          exit 1
+
+      - name: Start Micronaut gateway
+        run: |
+          set -a
+          source .env
+          set +a
+          gateway_bin="gateway-micronaut/build/install/edge-retail-gateway-micronaut/bin/edge-retail-gateway-micronaut"
+          test -x "$gateway_bin"
+          nohup "$gateway_bin" > gateway-micronaut-e2e.log 2>&1 &
+          echo $! > gateway-micronaut.pid
+          sleep 8
+          kill -0 "$(cat gateway-micronaut.pid)"
+
+      - name: Publish existing mock scenarios
+        run: |
+          python3 -m venv .ci-venv
+          .ci-venv/bin/python -m pip install --quiet -r mock-publisher/requirements.txt
+          .ci-venv/bin/python mock-publisher/publisher.py \
+            mock-publisher/scenarios/normal-multiple-items.json
+          .ci-venv/bin/python mock-publisher/publisher.py \
+            mock-publisher/scenarios/duplicate-event.json
+          sleep 3
+
+      - name: Verify MySQL results
+        run: |
+          set -a
+          source .env
+          set +a
+          compose="docker compose --env-file .env -f docker-compose.dev.yml"
+
+          checkout=$($compose exec -T mysql mysql -N -B \
+            -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE" \
+            -e "SELECT CONCAT(total_item_count, ':', total_amount) FROM checkouts WHERE event_id='evt-checkout-manual-20260727101011'")
+          test "$checkout" = "3:5000"
+
+          duplicate_count=$($compose exec -T mysql mysql -N -B \
+            -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE" \
+            -e "SELECT COUNT(*) FROM checkouts WHERE event_id='evt-checkout-test-duplicate-001'")
+          test "$duplicate_count" = "1"
+
+          device=$($compose exec -T mysql mysql -N -B \
+            -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE" \
+            -e "SELECT CONCAT(status, ':', tracking_session_id) FROM device_status WHERE device_id='jetson-01'")
+          test "$device" = "ONLINE:mock-run-multiple-001"
+
+      - name: Upload test logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: micronaut-gateway-logs
+          path: |
+            gateway-micronaut/gradle-test.log
+            gateway-micronaut-e2e.log
+          if-no-files-found: warn
+
+      - name: Stop test services
+        if: always()
+        run: |
+          if [ -f gateway-micronaut.pid ]; then
+            kill "$(cat gateway-micronaut.pid)" 2>/dev/null || true
+          fi
+          if [ -f .env ]; then
+            docker compose --env-file .env -f docker-compose.dev.yml logs mosquitto mysql || true
+            docker compose --env-file .env -f docker-compose.dev.yml down --volumes || true
+          fi
